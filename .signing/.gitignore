@@ -1,0 +1,4 @@
+# 签名私钥目录（不要提交 *.pem）
+*
+!.gitkeep
+!README.md
