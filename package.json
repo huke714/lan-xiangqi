@@ -1,0 +1,58 @@
+{
+  "name": "chinese-chess-yilin",
+  "version": "1.0.1",
+  "private": true,
+  "description": "中国象棋·弈林：局域网实时对战，浏览器即玩，可打包为 Windows 单文件 exe",
+  "license": "MIT",
+  "author": "弈林 contributors",
+  "keywords": [
+    "xiangqi",
+    "chinese-chess",
+    "socket.io",
+    "lan",
+    "multiplayer",
+    "pkg"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "start.js",
+  "bin": "start.js",
+  "scripts": {
+    "start": "node start.js",
+    "build": "node build.js",
+    "build:exe": "node build.js",
+    "keys:generate": "node scripts/generate-signing-keys.js",
+    "release:pack": "node scripts/package-release.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huke714/lan-xiangqi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/huke714/lan-xiangqi/issues"
+  },
+  "homepage": "https://github.com/huke714/lan-xiangqi#readme",
+  "pkg": {
+    "scripts": [
+      "start.js",
+      "server.js",
+      "live-reload.js",
+      "build-key.js",
+      "vault-lib.js",
+      "vault-public-key.js"
+    ],
+    "assets": [
+      "public/**/*"
+    ],
+    "outputPath": "dist"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^4.2.2",
+    "pkg": "^5.8.1"
+  }
+}

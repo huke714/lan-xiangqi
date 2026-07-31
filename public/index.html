@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="中国象棋 · 局域网多人联机">
+  <title>中国象棋</title>
+  <link rel="icon" href="/favicon.ico?v=5" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=5">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=5">
+  <link rel="apple-touch-icon" sizes="48x48" href="/favicon-48.png?v=5">
+  <meta name="theme-color" content="#212121">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 加载画面 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-mark" aria-hidden="true">弈</div>
+    <div class="loading-title">中国象棋</div>
+    <div class="loading-subtitle">局域网多人联机</div>
+    <div class="loading-bar" aria-hidden="true"><span></span></div>
+    <div class="loading-text" id="loadingText">铺陈棋盘</div>
+  </div>
+
+  <!-- 大厅 -->
+  <div class="lobby" id="lobby">
+    <div class="lobby-mist" aria-hidden="true"></div>
+
+    <div class="lobby-content">
+      <div class="lobby-brand">
+        <div class="lobby-logo-mark" aria-hidden="true">弈</div>
+        <h1>中国象棋</h1>
+        <p class="subtitle">在局域网里，和朋友下一盘</p>
+        <div class="lobby-share">
+          <span class="lobby-share-label">分享给对手 · 用浏览器打开此地址（勿另开程序）</span>
+          <div class="lobby-share-row">
+            <code class="ip" id="serverUrl">加载中…</code>
+          </div>
+          <div class="lobby-conn" id="lobbyConnStatus" aria-live="polite">正在连接…</div>
+        </div>
+        <button type="button" class="lobby-theme-btn" onclick="App.toggleTheme()" id="btnThemeLobby" data-tip="切换深浅背景">切换主题</button>
+      </div>
+
+      <div class="lobby-panel">
+        <div class="lobby-panel-title">开始对局</div>
+
+        <div class="lobby-field">
+          <label for="playerName">昵称</label>
+          <input type="text" id="playerName" placeholder="你的名字" maxlength="10" autocomplete="nickname">
+        </div>
+
+        <button type="button" class="btn btn-primary lobby-cta" onclick="App.handleCreateRoom()">创建房间</button>
+
+        <div class="lobby-divider-or"><span>或加入已有房间</span></div>
+
+        <div class="lobby-field">
+          <label for="roomIdInput">房间号</label>
+          <div class="lobby-field-row">
+            <input type="text" id="roomIdInput" placeholder="输入 4 位房间号" maxlength="4"
+                   style="text-transform: uppercase" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+            <button type="button" class="btn btn-join" onclick="App.handleJoinRoom()">加入</button>
+          </div>
+        </div>
+
+        <div class="room-list" id="roomList">
+          <div class="room-list-header">
+            <h3>可加入的房间</h3>
+            <button type="button" class="room-refresh" onclick="App.handleRefreshRooms()" data-tip="刷新房间列表">刷新</button>
+          </div>
+          <div id="roomListContent">
+            <div class="no-rooms">暂无房间<br><span>创建一个，然后把地址发给朋友</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选色弹窗 -->
+  <div class="waiting-overlay" id="colorSelectOverlay">
+    <div class="color-select-inner">
+      <h2>选择执棋方</h2>
+      <div class="color-select-poem">红方先行，黑方后手</div>
+      <div class="lobby-field color-select-name">
+        <label for="createPlayerName">昵称</label>
+        <input type="text" id="createPlayerName" placeholder="你的名字" maxlength="10" autocomplete="nickname">
+      </div>
+      <div class="time-select" id="timeSelect">
+        <div class="time-select-label">每方用时</div>
+        <div class="time-select-buttons" id="timeSelectButtons">
+          <button type="button" class="time-btn" data-seconds="300">5 分</button>
+          <button type="button" class="time-btn active" data-seconds="600">10 分</button>
+          <button type="button" class="time-btn" data-seconds="900">15 分</button>
+          <button type="button" class="time-btn" data-seconds="1800">30 分</button>
+          <button type="button" class="time-btn" data-seconds="0">不限</button>
+        </div>
+      </div>
+      <div class="color-select-buttons">
+        <button class="color-btn color-btn-red" onclick="App.selectColor('red')">
+          <div class="color-circle red"></div>
+          <span>红方先行</span>
+        </button>
+        <button class="color-btn color-btn-black" onclick="App.selectColor('black')">
+          <div class="color-circle black"></div>
+          <span>黑方后手</span>
+        </button>
+      </div>
+      <button class="btn btn-secondary" onclick="App.cancelColorSelect()">取消</button>
+    </div>
+  </div>
+
+  <!-- 加入房间：填写昵称 -->
+  <div class="waiting-overlay" id="joinRoomOverlay">
+    <div class="color-select-inner">
+      <h2>加入房间</h2>
+      <div class="color-select-poem">房间号 <span class="join-room-code" id="joinRoomCodeDisplay">—</span></div>
+      <div class="lobby-field color-select-name">
+        <label for="joinPlayerName">昵称</label>
+        <input type="text" id="joinPlayerName" placeholder="你的名字" maxlength="10" autocomplete="nickname">
+      </div>
+      <p class="join-room-hint" id="joinRoomHint">加入后将执另一方（后手或先手取决于房主所选）</p>
+      <div class="join-room-actions">
+        <button type="button" class="btn btn-primary" id="btnConfirmJoin" onclick="App.confirmJoinRoom()">进入对局</button>
+        <button type="button" class="btn btn-secondary" onclick="App.cancelJoinRoom()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 等待对手弹窗 -->
+  <div class="waiting-overlay" id="waitingOverlay">
+    <div class="waiting-card">
+      <div class="spinner"></div>
+      <h2>等待对手加入</h2>
+      <p class="waiting-label">房间号</p>
+      <div class="room-code" id="waitingRoomCode"></div>
+      <p class="waiting-hint">把房间号发给朋友即可开局</p>
+      <button class="btn btn-secondary" onclick="App.leaveWaiting()">取消</button>
+    </div>
+  </div>
+
+  <!-- 游戏界面 -->
+  <div class="game-container" id="gameContainer">
+    <!-- 顶部栏 -->
+    <div class="game-header">
+      <div class="room-meta" id="roomMeta">
+        <div class="room-meta-block">
+          <span class="room-meta-kicker">房间</span>
+          <code class="room-meta-code" id="gameRoomId"></code>
+        </div>
+        <div class="room-meta-block" id="colorInfo">
+          <span class="room-meta-kicker">身份</span>
+          <span class="room-meta-role" id="myColorName">—</span>
+        </div>
+        <div class="room-meta-block room-meta-spectate" id="spectatorTag" hidden>
+          <span class="room-meta-kicker">模式</span>
+          <span class="room-meta-role is-spectate">观战中</span>
+        </div>
+        <div class="room-meta-block room-meta-watch" id="spectatorBadge" hidden>
+          <span class="room-meta-kicker">旁观</span>
+          <span class="room-meta-role is-muted"><span id="spectatorCount">0</span> 人</span>
+        </div>
+      </div>
+      <div class="game-controls-inline" id="gameControls">
+        <div class="ctrl-group">
+          <button type="button" class="btn-sm btn-secondary player-only multiplayer-only" onclick="App.requestUndo()">悔棋</button>
+          <button type="button" class="btn-sm btn-secondary player-only multiplayer-only" onclick="App.resign()">认输</button>
+          <button type="button" class="btn-sm btn-secondary player-only multiplayer-only" onclick="App.offerDraw()">求和</button>
+          <div class="sandbox-control player-only hide-in-popup" id="sandboxControl">
+            <button type="button" class="btn-sm btn-secondary" id="btnSandbox" onclick="App.toggleSandbox()" data-tip="沙盘推演：己方回合计时，默认 2 分钟；不限时对局不计时">沙盘</button>
+          </div>
+          <button type="button" class="btn-sm btn-primary player-only" onclick="App.restartGame()" id="btnRestart" style="display:none;">再来一局</button>
+        </div>
+        <span class="ctrl-sep hide-in-popup" aria-hidden="true"></span>
+        <div class="ctrl-group">
+          <button type="button" class="btn-sm btn-ghost multiplayer-only hide-in-popup" id="btnDushu" onclick="App.sendRandomDushu()" data-tip="随机吐槽">吐槽</button>
+          <button type="button" class="btn-sm btn-ghost hide-in-popup" id="btnCompact" onclick="App.toggleCompact()" data-tip="紧凑模式">紧凑</button>
+          <button type="button" class="btn-sm btn-ghost hide-in-popup" id="btnPiP" onclick="App.openPiPWindow()" data-tip="小窗对局">小窗</button>
+          <button type="button" class="btn-sm btn-ghost" id="btnTheme" onclick="App.toggleTheme()" data-tip="切换主题">主题</button>
+          <button type="button" class="btn-sm btn-danger hide-in-popup" onclick="App.leaveGame()">离开</button>
+          <button type="button" class="btn-sm btn-primary show-in-popup-only" id="btnReturnMain" onclick="App.returnToMain()" data-tip="回到主页面继续对局">返回主页</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 小窗对局时主页遮罩 -->
+    <div class="pip-shield" id="pipShield" hidden>
+      <div class="pip-shield-card">
+        <div class="pip-shield-title">正在小窗对局</div>
+        <p class="pip-shield-desc">本页已暂停。关闭小窗，或在小窗点击「返回主页」，即可回到这里继续。</p>
+      </div>
+    </div>
+
+    <div class="sandbox-zen-bar" id="sandboxBar" hidden>
+      <div class="sandbox-zen-left">
+        <span class="sandbox-zen-kicker">推演</span>
+        <span class="sandbox-zen-time" id="sandboxTime">1:00</span>
+        <span class="sandbox-live-hint" id="sandboxLiveHint" hidden>对局有更新</span>
+      </div>
+      <div class="sandbox-zen-right">
+        <button type="button" class="sandbox-zen-exit" onclick="App.exitSandbox()">退出沙盘</button>
+      </div>
+    </div>
+
+    <!-- 主体：宽屏左右，窄屏/竖屏上下；沙盘禅模式仅双盘 -->
+    <div class="game-main">
+      <!-- 沙盘：左侧当前对局（只读） -->
+      <div class="live-board-area sandbox-card sandbox-card-ref" id="liveBoardArea" hidden>
+        <div class="sandbox-pane-stack">
+          <div class="sandbox-card-head">
+            <span class="sandbox-card-badge sandbox-card-badge-ghost" aria-hidden="true">对照</span>
+            <div class="sandbox-card-title">当前对局</div>
+            <p class="sandbox-card-desc">对照实战</p>
+          </div>
+          <div class="board-wrapper board-wrapper-live">
+            <canvas id="chessBoardLive"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 棋盘区域（常态=对局；沙盘=右侧推演） -->
+      <div class="game-board-area" id="gameBoardArea">
+        <div class="sandbox-pane-stack" id="sandboxPaneStack">
+          <div class="sandbox-card-head sandbox-card-head-active" id="sandboxBoardLabel" hidden>
+            <span class="sandbox-card-badge">推演中</span>
+            <div class="sandbox-card-title">沙盘</div>
+            <p class="sandbox-card-desc">可试双方着法</p>
+          </div>
+          <div class="board-column">
+            <div class="match-status-row">
+              <span class="game-status normal" id="gameStatus">等待对手加入</span>
+            </div>
+            <div class="board-row">
+              <!-- 紧凑侧栏：贴棋盘左侧，上黑下红（翻转时对调） -->
+              <aside class="player-rails" aria-label="对局信息">
+                <div class="player-bar" id="blackBar">
+                  <div class="player-info">
+                    <div class="player-color black"></div>
+                    <span class="player-name" id="blackName">等待加入…</span>
+                  </div>
+                  <div class="player-bar-right">
+                    <div class="timer-display" id="blackTimer">10:00</div>
+                    <div class="turn-indicator" id="blackTurn">等待中</div>
+                  </div>
+                </div>
+                <div class="player-bar" id="redBar">
+                  <div class="player-info">
+                    <div class="player-color red"></div>
+                    <span class="player-name" id="redName">等待加入…</span>
+                  </div>
+                  <div class="player-bar-right">
+                    <div class="timer-display" id="redTimer">10:00</div>
+                    <div class="turn-indicator" id="redTurn">等待中</div>
+                  </div>
+                </div>
+              </aside>
+
+              <div class="board-stage">
+                <div class="board-wrapper">
+                  <canvas id="chessBoard"></canvas>
+                </div>
+                <div class="sandbox-board-nav" id="sandboxBoardNav" hidden role="group" aria-label="推演着法导航">
+                  <button type="button" class="sandbox-board-nav-btn" id="btnSandboxPrev" onclick="App.sandboxStepBack()" disabled data-tip="上一步" aria-label="上一步">
+                    <svg class="sandbox-board-nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M6.2 14.6 12 8.4l5.8 6.2" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="sandbox-board-nav-btn" id="btnSandboxNext" onclick="App.sandboxStepForward()" disabled data-tip="下一步" aria-label="下一步">
+                    <svg class="sandbox-board-nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M6.2 9.4 12 15.6l5.8-6.2" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 谱牒 + 聊天 -->
+      <aside class="side-panel">
+        <div class="side-panel-shell">
+          <div class="move-history">
+            <div class="panel-header">棋谱</div>
+            <div class="move-list" id="moveList"></div>
+          </div>
+          <div class="chat-box" id="chatBox">
+            <div class="panel-header">聊天</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+              <input type="text" id="chatInput" placeholder="发一条消息…"
+                     onkeypress="if(event.key==='Enter')App.sendChat()">
+              <button type="button" onclick="App.sendChat()">发送</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 毒舌飘字层 -->
+    <div class="dushu-float" id="dushuFloat"></div>
+  </div>
+
+  <!-- 游戏结束弹窗 -->
+  <div class="modal-overlay" id="gameOverModal">
+    <div class="modal">
+      <h2 id="modalTitle">对局结束</h2>
+      <p id="modalMessage"></p>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="App.restartGame()" id="gameRestartBtn">再来一局</button>
+        <button class="btn btn-secondary" onclick="App.closeGameOverAndLeave()">返回大厅</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 求和弹窗 -->
+  <div class="modal-overlay" id="drawModal">
+    <div class="modal">
+      <h2>求和</h2>
+      <p>对方提议和棋，是否同意？</p>
+      <div class="modal-buttons">
+        <button class="btn btn-success" onclick="App.respondDraw(true)">同意</button>
+        <button class="btn btn-danger" onclick="App.respondDraw(false)">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 悔棋确认弹窗 -->
+  <div class="modal-overlay" id="undoModal">
+    <div class="modal">
+      <h2>悔棋请求</h2>
+      <p id="undoMessage">对方请求悔棋，是否同意？</p>
+      <div class="modal-buttons">
+        <button class="btn btn-success" onclick="App.confirmUndo(true)">同意</button>
+        <button class="btn btn-danger" onclick="App.confirmUndo(false)">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通用确认（替代浏览器原生弹窗） -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="confirm-stage" id="confirmStage">
+      <div class="confirm-mock" id="confirmMock" aria-hidden="true" hidden>
+        <div class="mock-stage">
+          <div class="mock-burst" data-t="羞"></div>
+          <div class="mock-burst" data-t="怂"></div>
+          <div class="mock-burst" data-t="啧"></div>
+          <div class="mock-burst" data-t="哈"></div>
+          <div class="mock-burst mock-burst-extra" data-t="悔？"></div>
+          <div class="mock-burst mock-burst-draw" data-t="和？"></div>
+          <svg class="mock-char" viewBox="0 0 148 150" preserveAspectRatio="xMidYMid meet" focusable="false" aria-hidden="true">
+            <ellipse class="mock-shadow" cx="64" cy="138" rx="30" ry="6" fill="rgba(0,0,0,0.18)"/>
+            <g class="mock-body">
+              <!-- 身体：略扁椭圆；头保持正圆 -->
+              <ellipse cx="64" cy="108" rx="26" ry="24" fill="#f2c9a0"/>
+              <circle class="mock-head" cx="64" cy="56" r="32" fill="#f6d3ad"/>
+
+              <!-- 认输用：普通眼眉嘴 -->
+              <g class="mock-face-resign">
+                <ellipse class="mock-eye mock-eye-l" cx="52" cy="54" rx="4.5" ry="5.5" fill="#2a2a2a"/>
+                <ellipse class="mock-eye mock-eye-r" cx="76" cy="54" rx="4.5" ry="5.5" fill="#2a2a2a"/>
+                <path class="mock-brow mock-brow-l" d="M44 44 q8 -6 16 0" fill="none" stroke="#2a2a2a" stroke-width="2.4" stroke-linecap="round"/>
+                <path class="mock-brow mock-brow-r" d="M68 44 q8 -6 16 0" fill="none" stroke="#2a2a2a" stroke-width="2.4" stroke-linecap="round"/>
+                <path class="mock-mouth mock-mouth-sad" d="M54 74 q10 -8 20 0" fill="none" stroke="#c45c48" stroke-width="2.6" stroke-linecap="round"/>
+              </g>
+
+              <!-- 悔棋用：毒舌脸 -->
+              <g class="mock-face-toxic">
+                <!-- 斜吊眉 -->
+                <path class="mock-toxic-brow-l" d="M42 40 l18 7" fill="none" stroke="#2a2a2a" stroke-width="3.2" stroke-linecap="round"/>
+                <path class="mock-toxic-brow-r" d="M70 47 l18 -8" fill="none" stroke="#2a2a2a" stroke-width="3.2" stroke-linecap="round"/>
+                <!-- 半眯嘲讽眼 + 高光 -->
+                <path class="mock-toxic-eye-l" d="M46 52 q6 7 12 0" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round"/>
+                <path class="mock-toxic-eye-r" d="M70 52 q6 7 12 0" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="52" cy="55" r="1.6" fill="#fff" opacity="0.85"/>
+                <circle cx="76" cy="55" r="1.6" fill="#fff" opacity="0.85"/>
+                <!-- 侧歪坏笑 + 吐舌头 -->
+                <path class="mock-toxic-mouth" d="M52 68 q14 16 28 -2" fill="none" stroke="#c45c48" stroke-width="3" stroke-linecap="round"/>
+                <ellipse class="mock-toxic-tongue" cx="74" cy="78" rx="7" ry="5.5" fill="#e86a6a"/>
+                <path d="M70 78 h8" stroke="#c44a4a" stroke-width="1.4" stroke-linecap="round"/>
+                <!-- 脸红 -->
+                <ellipse class="mock-blush mock-blush-l" cx="44" cy="64" rx="7" ry="4.5" fill="#f08080"/>
+                <ellipse class="mock-blush mock-blush-r" cx="86" cy="62" rx="7" ry="4.5" fill="#f08080"/>
+                <!-- 欠揍汗滴 -->
+                <path class="mock-toxic-sweat" d="M94 34 q6 10 0 18" fill="none" stroke="#7eb8e8" stroke-width="3" stroke-linecap="round"/>
+              </g>
+
+              <!-- 悔棋：指着你嘲讽的手 -->
+              <g class="mock-hand-point">
+                <path d="M96 92 q18 -6 28 -22" fill="none" stroke="#f2c9a0" stroke-width="9" stroke-linecap="round"/>
+                <circle cx="126" cy="68" r="10" fill="#f2c9a0"/>
+                <path class="mock-finger" d="M126 62 v-20" stroke="#f2c9a0" stroke-width="8" stroke-linecap="round"/>
+                <path d="M118 66 l-8 -10" stroke="#f2c9a0" stroke-width="5.5" stroke-linecap="round"/>
+                <path d="M134 66 l8 -10" stroke="#f2c9a0" stroke-width="5.5" stroke-linecap="round"/>
+              </g>
+
+              <!-- 认输白旗 -->
+              <g class="mock-flag">
+                <line x1="26" y1="78" x2="26" y2="126" stroke="#8a8a8a" stroke-width="3" stroke-linecap="round"/>
+                <path class="mock-flag-cloth" d="M26 80 h28 l-6 10 h-22 z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="1"/>
+              </g>
+
+              <!-- 求和：递出橄榄枝 / 握手姿态 -->
+              <g class="mock-draw-offer">
+                <path class="mock-draw-arm" d="M90 100 q22 -4 36 -18" fill="none" stroke="#f2c9a0" stroke-width="9" stroke-linecap="round"/>
+                <circle cx="128" cy="80" r="11" fill="#f2c9a0"/>
+                <path class="mock-draw-leaf" d="M122 68 q10 -18 22 -8 q-8 14 -20 16 z" fill="#7cb87a" stroke="#5a9a58" stroke-width="1"/>
+                <path d="M128 72 q4 -6 10 -4" fill="none" stroke="#5a9a58" stroke-width="1.4" stroke-linecap="round"/>
+              </g>
+            </g>
+          </svg>
+          <div class="mock-caption" id="confirmMockCaption"></div>
+        </div>
+      </div>
+      <div class="modal modal-confirm">
+        <h2 id="confirmTitle">请确认</h2>
+        <p id="confirmMessage"></p>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-secondary" id="confirmCancel">取消</button>
+          <button type="button" class="btn btn-primary" id="confirmOk">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部提示 -->
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast-dot" aria-hidden="true"></span>
+    <span class="toast-text" id="toastText"></span>
+  </div>
+
+  <!-- 脚本：socket.io 客户端随静态资源打包，避免 pkg 无法提供 /socket.io/socket.io.js -->
+  <script src="js/vendor/socket.io.min.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/rules.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/utils/dom.js"></script>
+  <script src="js/utils/audio.js"></script>
+  <script src="js/state/GameState.js"></script>
+  <script src="js/state/SessionStore.js"></script>
+  <script src="js/core/NetworkService.js"></script>
+  <script src="js/state/RoomStore.js"></script>
+  <script src="js/ui/loading.js"></script>
+  <script src="js/ui/lobby.js"></script>
+  <script src="js/ui/game.js"></script>
+  <script src="js/ui/modals.js"></script>
+  <script src="js/ui/controls.js"></script>
+  <script src="js/ui/chat.js"></script>
+  <script src="js/ui/moveList.js"></script>
+  <script src="js/ui/dushu.js"></script>
+  <script src="js/ui/boardOverlay.js"></script>
+  <script src="js/ui/boardInteraction.js"></script>
+  <script src="js/ui/PopupFlow.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+    // 开发热刷新：仅本机开发时启用，避免局域网多开一条无用连接
+    (function () {
+      if (typeof io === 'undefined') return;
+      const host = location.hostname;
+      if (host !== 'localhost' && host !== '127.0.0.1') return;
+      try {
+        const s = io({ reconnection: true, transports: ['polling'], upgrade: false });
+        s.on('devReload', function () {
+          try {
+            const st = (typeof GameState !== 'undefined' && GameState.getState)
+              ? GameState.getState()
+              : null;
+            if (st && st.roomId && (st.status === 'playing' || st.status === 'waiting')) {
+              if (typeof Modals !== 'undefined' && Modals.showToast) {
+                Modals.showToast('有更新，对局结束后再刷新', 'info');
+              }
+              return;
+            }
+          } catch (err) { /* ignore */ }
+          location.reload();
+        });
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+</body>
+</html>
